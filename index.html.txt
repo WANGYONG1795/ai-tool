@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI文案工具</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;font-family:system-ui}
+body{max-width:1100px;margin:20px auto;padding:0 16px}
+.area{width:100%;min-height:140px;padding:10px;margin:8px 0;border:1px solid #ccc;border-radius:6px}
+button{padding:8px 16px;cursor:pointer;margin:4px}
+.box{border:1px solid #eee;padding:16px;border-radius:8px;margin:12px 0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ========== 这里已经填好你的supabase参数 ==========
+const SUPABASE_URL = "https://tfaqrahrzyysjkkaidzz.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ga0YuZssFkkFz0z4RQZ5w_PPUiah70";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let user = null;
+
+async function checkUser(){
+  const {data:{session}} = await supabase.auth.getSession();
+  if(session?.user){
+    user = session.user;
+    renderMain();
+  }else{
+    renderLogin();
+  }
+}
+
+function renderLogin(){
+  document.getElementById('app').innerHTML = `
+  <div class="box">
+    <h3>登录</h3>
+    <input class="area" id="email" placeholder="邮箱"><br>
+    <input class="area" id="pwd" placeholder="密码" type="password"><br>
+    <button onclick="doSignUp()">注册</button>
+    <button onclick="doLogin()">登录</button>
+  </div>
+  `
+}
+
+async function doLogin(){
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('pwd').value;
+  const {data,err} = await supabase.auth.signInWithPassword({email,password});
+  if(err) alert(err.message);
+  else checkUser();
+}
+async function doSignUp(){
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('pwd').value;
+  const {data,err} = await supabase.auth.signUp({email,password});
+  if(err) alert(err.message);
+  else alert("注册成功！");
+}
+
+function renderMain(){
+  document.getElementById('app').innerHTML = `
+  <div class="box">
+    <h3>AI工具</h3>
+    <p>已登录：${user.email}</p>
+    <button onclick="logout()">退出登录</button>
+    <hr>
+    <div>
+      <label>菜单类型</label>
+      <select id="menuType">
+        <option value="robot_dialog">客服脚本</option>
+        <option value="slot_word">槽位词</option>
+        <option value="article">公众号文案</option>
+      </select>
+    </div>
+    <textarea class="area" id="prompt" placeholder="输入需求"></textarea>
+    <textarea class="area" id="sceneDialog" placeholder="原始对话（可选）"></textarea>
+    <button onclick="saveRecord()">保存记录</button>
+    <div id="result"></div>
+  </div>
+  `
+}
+
+async function saveRecord(){
+  const res = await supabase.from('ai_records').insert({
+    user_id:user.id,
+    menu_type:document.getElementById('menuType').value,
+    prompt:document.getElementById('prompt').value,
+    scene_dialog:document.getElementById('sceneDialog').value,
+    result:"暂存内容"
+  })
+  document.getElementById('result').innerText = res.error ? res.error.message : "保存成功！";
+}
+
+async function logout(){
+  await supabase.auth.signOut();
+  user=null;
+  renderLogin();
+}
+
+checkUser();
+</script>
+</body>
+</html>
